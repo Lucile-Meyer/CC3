@@ -1,0 +1,35 @@
+---
+title: "R Notebook"
+output: 
+  github_document:
+    toc:true
+    toc_depth: 2
+  
+
+---
+Les données ont été téléchargées, sur l'ordinateur, dans un même fichier directement sur le site de l'ENA avec le numéro accession PRJNA335827. Ce dossier a été ajouté à la VM via le New Folder et a été dézippé automatiquement. Tous les reads ont été ajouté dans le dossier Run.
+
+```{r}
+library(dada2)
+path <- "~/Git/CC3/Run"
+list.files(path)
+```
+```{r}
+fnFs <- sort(list.files(path, pattern="1.fastq", full.names = TRUE))
+fnRs <- sort(list.files(path, pattern="2.fastq", full.names = TRUE))
+sample.namesFs <- sapply(strsplit(basename(fnFs), "\\."), `[`, 1)
+sample.namesRs <- sapply(strsplit(basename(fnRs), "\\."), `[`, 1)
+sample.namesFs
+```
+```{r}
+sample.namesRs
+```
+```{r}
+plotQualityProfile(fnFs[1:2])
+```
+
+```{r}
+plotQualityProfile(fnRs[1:2])
+```
+
+
