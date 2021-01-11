@@ -2,11 +2,12 @@
 title: "R Notebook"
 output: 
   github_document:
-    toc:true
+    toc: true
     toc_depth: 2
   
 
 ---
+
 Les données ont été téléchargées, sur l'ordinateur, dans un même fichier directement sur le site de l'ENA avec le numéro accession PRJNA335827. Ce dossier a été ajouté à la VM via le New Folder et a été dézippé automatiquement. Tous les reads ont été ajouté dans le dossier Run.
 
 ```{r}
