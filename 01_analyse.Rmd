@@ -61,3 +61,4 @@ J'ai laissé le trimLeft car je sais pas si il y a des restes d'amorces :c
 errF <- learnErrors(filtFs, multithread=TRUE)
 ```
 
+tentative
