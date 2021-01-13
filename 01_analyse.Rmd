@@ -11,9 +11,11 @@ output:
 Les données ont été téléchargées, sur l'ordinateur, dans un même fichier directement sur le site de l'ENA avec le numéro accession PRJNA335827. Ce dossier a été ajouté à la VM via le New Folder et a été dézippé automatiquement. Tous les reads ont été ajouté dans le dossier Run.
 
 ```{r}
+library(Rcpp)
 library(dada2)
 path <- "~/Git/CC3/Run"
 list.files(path)
+
 ```
 ```{r}
 fnFs <- sort(list.files(path, pattern="1.fastq", full.names = TRUE))
@@ -58,12 +60,23 @@ En utilisant cette formule pour couper et en utilisant les reads qui en sortent 
 
 
 ```{r}
+errF <- learnErrors(filtFs, nbases = 1e7, multithread=TRUE)
+```
+
+```{r}
+errR <- learnErrors(filtRs, nbases = 1e7, multithread=TRUE)
+```
+
+
+```{r}
 errF <- learnErrors(filtFs, multithread=TRUE)
 ```
 
 ```{r}
 errR <- learnErrors(filtRs, multithread=TRUE)
 ```
+
+Chez moi ça fonctionne
 
 ```{r}
 plotErrors(errF, nominalQ=TRUE)
@@ -120,4 +133,3 @@ seqs <- getSequences(seqtab)
 names(seqs) <- seqs
 alignment <- AlignSeqs(DNAStringSet(seqs), anchor=NA)
 ```
-
