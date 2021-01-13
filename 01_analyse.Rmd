@@ -66,9 +66,11 @@ errF <- learnErrors(filtFs, nbases = 1e7, multithread=TRUE)
 errR <- learnErrors(filtFs, nbases = 1e7, multithread=TRUE)
 ```
 
+
 ```{r}
 plotErrors(errF, nominalQ=TRUE)
 ```
+
 
 ```{r}
 plotErrors(errR, nominalQ=TRUE)
