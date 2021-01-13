@@ -59,6 +59,8 @@ En utilisant cette formule pour couper et en utilisant les reads qui en sortent 
 ```{r}
 errF <- learnErrors(filtFs, nbases = 1e7, multithread=TRUE)
 ```
+```
+
 
 ```{r}
 errR <- learnErrors(filtFs, nbases = 1e7, multithread=TRUE)
@@ -70,7 +72,6 @@ plotErrors(errF, nominalQ=TRUE)
 
 ```{r}
 plotErrors(errR, nominalQ=TRUE)
-
 ```
 
 ```{r}
