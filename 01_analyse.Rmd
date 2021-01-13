@@ -59,11 +59,14 @@ En utilisant cette formule pour couper et en utilisant les reads qui en sortent 
 ```{r}
 errF <- learnErrors(filtFs, nbases = 1e7, multithread=TRUE)
 ```
+
+```{r}
+errF <- learnErrors(filtFs, multithread=TRUE)
 ```
 
 
 ```{r}
-errR <- learnErrors(filtFs, nbases = 1e7, multithread=TRUE)
+errR <- learnErrors(filtRs, nbases = 1e7, multithread=TRUE)
 ```
 
 
@@ -76,7 +79,50 @@ plotErrors(errF, nominalQ=TRUE)
 plotErrors(errR, nominalQ=TRUE)
 ```
 
+
 ```{r}
 dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
+```
+
+```{r}
+dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
+```
+
+```{r}
+mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs, verbose=TRUE)
+```
+
+```{r}
+seqtab <- makeSequenceTable(mergers)
+dim(seqtab)
+```
+
+```{r}
+seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
+```
+
+```{r}
+dim(seqtab.nochim)
+```
+
+```{r}
+sum(seqtab.nochim)/sum(seqtab)
+```
+
+```{r}
+getN <- function(x) sum(getUniques(x))
+track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers,
+getN), rowSums(seqtab.nochim))
+colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "n
+onchim")
+rownames(track) <- sample.namesFs
+head(track)
+```
+
+```{r}
+library(DECIPHER)
+seqs <- getSequences(seqtab)
+names(seqs) <- seqs
+alignment <- AlignSeqs(DNAStringSet(seqs), anchor=NA)
 ```
 
