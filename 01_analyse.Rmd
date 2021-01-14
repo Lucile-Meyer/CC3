@@ -17,6 +17,8 @@ path <- "~/Git/CC3/Run"
 list.files(path)
 
 ```
+Le path permet de regrouper le jeu de données dans un même objet afin de faciliter son analyse par dada2
+
 ```{r}
 fnFs <- sort(list.files(path, pattern="1.fastq", full.names = TRUE))
 fnRs <- sort(list.files(path, pattern="2.fastq", full.names = TRUE))
@@ -24,19 +26,23 @@ sample.namesFs <- sapply(strsplit(basename(fnFs), "\\."), `[`, 1)
 sample.namesRs <- sapply(strsplit(basename(fnRs), "\\."), `[`, 1)
 sample.namesFs
 ```
+
 ```{r}
 sample.namesRs
 ```
+
+On va séparer notre jeu de données en plaçant dans un objet fnFs tous les reads nommés 1.fastq correspondant donc aux reads foward. On placera donc dans un objet fnRs tous les reads 2.fastq qui correspondent donc aux reads reverse.
+
 ```{r}
 plotQualityProfile(fnFs[1:2])
 ```
-Diminution du Q30 vers 240 pb.
+Avec cette fonction on va regarder les scores qualités de nos deux premières données présentes dans fnFs. Un plot sera donc réalisé permettant de visualiser le profil qualité de ces séquences. On retrouve le score qualité en ordonnée et la longueur des séquences en abscisse. La ligne verte correspond au score de qualité des nucléotides de chaque séquence. La ligne orange représente la longueur de chaque read (sachant qu’avec illumina on a des read de 250 pb).On remarque sur les reads Forwards une diminution du Q30 vers 240 pb.
 
 ```{r}
 plotQualityProfile(fnRs[1:2])
 ```
 
-Diminution vers 200 pb.
+Une diminution du Q30 vers200 pb est observée pour les reads Reverses.
 
 ```{r}
 filtFs <- file.path(path, "filtered", paste0(sample.namesFs, "_R1.fastq"))
@@ -50,13 +56,18 @@ filtFs
 filtRs
 ```
 
+Cette fonction permet de ranger les fichiers dans un dossiers filtered avec des objets filtFs et Rs respectivement pour les fichiers Forward et Reverse.
+
+
 ```{r}
 out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, trimLeft= 21, truncLen=c(240,200),
               maxN=0, maxEE=c(2,2), truncQ=2, rm.phix=TRUE,
               compress=TRUE, multithread=TRUE)
 head(out)
 ```
-En utilisant cette formule pour couper et en utilisant les reads qui en sortent pour le calcul d'erreur, la machine crash...
+
+Cette fonction va nous permettre de couper et de filtrer nos reads grâce au filterAndTrim. La fonction truncLen va permettre de couper les reads forward et reverse à l’endroit indiqué. Nous avons choisi de couper les reads Forwards à 240 pb et les reads Reverses à 200 pb dû à la diminution du Q30 observé précédement. La fonction maxEE=c(2,2) va nous permettre d’écarter les reads avec un score de qualité inférieur à Q20, c’est à dire les séquences ayant 1 erreur toutes les 100 paires de bases en moyenne. Le timLeft va permettre d’enlever les primer sur nos reads Forwards et Reverses car nous ne savons si ils sont toujours présent sur nos séquences, cela permettra d'éviter que nos séquences soient détectées comme des chimères par la suite. La valeur du reads.in nous indique le nombre de reads initial et reads.out le nombre de reads apres filtrage qualité. On peut voir qu’on ne perds pas beaucoup de reads.
+
 
 
 ```{r}
@@ -66,17 +77,9 @@ errF <- learnErrors(filtFs, nbases = 1e7, multithread=TRUE)
 ```{r}
 errR <- learnErrors(filtRs, nbases = 1e7, multithread=TRUE)
 ```
+Traditionnellement les formules errF <- learnErrors(filtFs, multithread=TRUE) et errR <- learnErrors(filtRs, multithread=TRUE) sont utilisées pour calculer le modèle d'erreur de Dada2. Cependant lors de cette analyse, il a été impossible d'utiliser ces deux formules sans risquer un crash de la VM. Il est donc possible que la puissance allouée à notre VM, ou sa capacité de stockage, ne soient pas assez importantes pour permettre le calcul du modèle d'erreur de dada2 de nos 222 reads. D'autres formules ont donc été utilisées afin de nous permettre de continuer notre analyse.
 
-
-```{r}
-errF <- learnErrors(filtFs, multithread=TRUE)
-```
-
-```{r}
-errR <- learnErrors(filtRs, multithread=TRUE)
-```
-
-Chez moi ça fonctionne
+Il nous semble que ces deux nouvelles formules prennent beaucoup de moins de temps à être exécutées que celles utilisées jusqu'à présent. Nous ne savons donc pas si le modèle d'erreur calculé sera correct. 
 
 ```{r}
 plotErrors(errF, nominalQ=TRUE)
@@ -87,35 +90,59 @@ plotErrors(errF, nominalQ=TRUE)
 plotErrors(errR, nominalQ=TRUE)
 ```
 
+On a tracé des graphiques reprèsentant les erreurs sur nos différentes reads (forwards et reverses). Avec un score de qualité très haut, la probabilité que A donne un A est très forte (visible sur le graphique A2A). Sur le graphique A2C nous verrons la probabilité que A ait donné un C et ainsi dessuite. Il sera donc possible de visualiser les probabilité de chaque nucléotide en donne un autre. Ainsi Plus le Q score augmente et plus la probabilité qu’il y ait une substitution est faible. Illumina fait des erreurs de lecture, c’est pour cette raison qu’appliquer ce modèle mathématique permettra de corriger ces erreurs. En revanche il faut avoir conscience que ce modèle ne va pas permerttre de corriger toutes les erreurs et qu’il peut en créer, par exemple en corrigeant une base par une autre en la prennant pour une erreur de lecture alors qu’elle pourrait être un variant naturelle de cette séquence. La courbe en noire correspond au modèle mathématique que Dada2 a créée.
+
 
 ```{r}
 dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
 ```
 
+Cette fonction permet d’appliquer notre modèle d'erreur à nos séquences Forwards. Il est important de noté que de nombreux crash ont été observé lors de cette étape, ralantissant la progression de l'analyse.
+
+
 ```{r}
 dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
 ```
+
+Cette fonction permet d’appliquer notre modèle d'erreur à nos séquences Reverses.
+
 
 ```{r}
 mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs, verbose=TRUE)
 ```
 
+Merger va permettre de fusionner les reads Forwards avec les Reverses permettant la formation de contigs. Là aussi, comparé aux analyses que nous avons pû faire lors du CC1 et CC2, il nous a semblé que la fusion des reads aient été extrêmement rapide, ce qui nous parait assez étrange étant donné le nombre de séquences que nous avons.
+
+## Contruction de la table de séquence
+
 ```{r}
 seqtab <- makeSequenceTable(mergers)
 dim(seqtab)
 ```
+On va placer dans l’objet seqtab, la matrice d’observation de l’objet issu de mergers. Il y a donc 11 lignes dans notre tableau avec 19426 colonnes.
+
+
+## Identification et retrait des chimères
 
 ```{r}
 seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
 ```
+Cette fonction va permettre d’identifier le nombre de chimère dans nos contigs. 17869 chimères ont été détectées et seront retirées de notre jeu de données.
 
 ```{r}
 dim(seqtab.nochim)
 ```
+Ici nous avons donc le tableau de nos données qui ne contient plus que 8586 colones pour 111 reads.
+
 
 ```{r}
 sum(seqtab.nochim)/sum(seqtab)
 ```
+
+Il nous reste donc 94% de notre jeu de données. Plus de 6% des données étaient des chimères. Ce résultat nous paraît extrêmement discutable. En effet nous savons qu'il y a de nombreuses chimères dans un  jeu de données issu de la recherche. Hors ici il semblerait que le nombre de chimères soient extrêmement bas. Ce résultat nous paraît abbérant surtout que nous avons 111 contigs. Il est possible que le modèle d'erreur que nous avons fais n'est pas correct, faussant ainsi l'analyse des chimères. Il est aussi possible que lors de notre FilterAndTRim nous ayons trop coupé nos séquences et qu'un biais serait apparu dans notre jeu de données, rendant le nombre de chimères très faible.
+
+
+## Pipeline
 
 ```{r}
 getN <- function(x) sum(getUniques(x))
@@ -127,9 +154,27 @@ rownames(track) <- sample.namesFs
 head(track)
 ```
 
-```{r}
+Track permet de voir les traitements que nous avons fais sur nos séquences depuis le début de l’analyse Dada2. On voit qu’on passe de 11285 séquences, dans la colonne input, à 1248 séquences après l’application du modèle d’erreur et le retrait des chimères.
+
+Dû à tous les problèmes que nous avons eu nous n'avons malheureusement pas pû aller plus loin dans notre analyse de l'article. Nous avions cependant déjà réfléchi aux possibles analyses que nous aurions aimé réaliser. En premier pour finir l'analyse de dada2 nous aurions aimé réaliser les fonctions suivantes:
+
+ref_fasta <- "silva_nr99_v138_train_set.fa.gz"
+taxtab <- assignTaxonomy(seqtab.nochim, refFasta = ref_fasta)
+colnames(taxtab) <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus")
+taxa <- assignTaxonomy(seqtab.nochim, "silva_nr99_v138_train_set.fa.gz", multithread=TRUE)
+taxa.print <- taxtab 
+rownames(taxtab) <- NULL
+head(taxa.print)
+
 library(DECIPHER)
 seqs <- getSequences(seqtab)
 names(seqs) <- seqs
 alignment <- AlignSeqs(DNAStringSet(seqs), anchor=NA)
-```
+
+Ces fonctions nous auraient permi de réaliser l'assignation taxonomique et l'allignement des séquences.
+
+
+Concernant l'analyse phyloseq nous aurions par exemple aimé réaliser le graphiques mettant en relation l'abondance totale et la prévalence des genres. Cela nous aurez permi de voir les différentes abondances que nous trouvions et de les comparer avec celles de l'article (figure 3). Nous aurions aussi aimer nous pencher sur les taxas  Mycoplasma, Leptotrichiaceae, Fusobacterium et Pasteurellaceae, car ce sont les taxa décrit dans l'article comme étant le plus suceptibles d'être impliqué dans la Bovine Respiratory disease et que les chercheurs ce sont intéressés à ces 4 taxas précisément, à la condition que notre assignation taxonimique nous permettent d'identifier ces 4 taxas.
+
+
+
